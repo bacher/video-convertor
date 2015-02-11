@@ -2,6 +2,8 @@
 var childProcess = require('child_process');
 require('es6-promise').polyfill();
 
+var PREVIEW_COUNT = 9;
+
 var allowQualities = [
     {
         height: 240,
@@ -25,12 +27,10 @@ var allowQualities = [
     }
 ];
 
-var fileName = '../video/news1_1m.mpg';
-
 var execCommand = 'ffmpeg';
 
-var CONFIG_PATTERN = '-vcodec libx264 -preset medium -s {RESOLUTION} -acodec libmp3lame -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif -y {FILENAME}';
-
+var VIDEO_PATTERN = '-vcodec libx264 -preset medium -s {RESOLUTION} -acodec libmp3lame -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif {FILENAME}';
+var IMAGE_PATTERN = '-f image2 -filter:v yadif -ss {TIME} -vcodec mjpeg -vframes 1 {FILENAME}';
 
 function processVideoFile(fileName, outputDir) {
     getInfo(fileName)
@@ -43,7 +43,7 @@ function processVideoFile(fileName, outputDir) {
             allowQualities.forEach(function(quality) {
                 if (quality.height <= details.resolution.height) {
                     var configString =
-                        CONFIG_PATTERN
+                        VIDEO_PATTERN
                             .replace('{RESOLUTION}', '' + (quality.height * aspectRation) + 'x' + quality.height)
                             .replace('{BITRATE}', quality.bitrate)
                             .replace('{FILENAME}', outputDir + '/video_' + quality.height + '.mp4');
@@ -52,12 +52,30 @@ function processVideoFile(fileName, outputDir) {
                 }
             });
 
+            var delta = details.duration / (PREVIEW_COUNT + 1);
+
+            for (var i = 1; i <= PREVIEW_COUNT; ++i) {
+                var configString =
+                    IMAGE_PATTERN
+                        .replace('{TIME}', Math.round(delta * i))
+                        .replace('{FILENAME}', outputDir + '/preview_' + i + '.jpg');
+
+                outputFiles.push(configString);
+
+                var configStringMini = '-s 96x54 ' +
+                    IMAGE_PATTERN
+                        .replace('{TIME}', Math.round(delta * i) )
+                        .replace('{FILENAME}', outputDir + '/preview_' + i + '_m.jpg');
+
+                outputFiles.push(configStringMini);
+            }
+
             runFFMpeg(details, fileName, outputFiles.join(' '));
         });
 
 }
 
-processVideoFile('../video/news1_1m.mpg', '../video');
+processVideoFile('../video/news1_1m.mpg', '../video/out');
 
 function runFFMpeg(details, fileName, optionsString) {
 
@@ -67,7 +85,9 @@ function runFFMpeg(details, fileName, optionsString) {
 
     var percent = 0;
 
-    var options = '-hide_banner -i ' + fileName + ' ' + optionsString;
+    var options = '-hide_banner -y -i ' + fileName + ' ' + optionsString;
+
+    console.warn(options);
 
     var ffmpeg = childProcess.spawn(execCommand, options.split(' '));
 
@@ -82,6 +102,8 @@ function runFFMpeg(details, fileName, optionsString) {
             percent = Math.round(100 * currentSecond / details.duration);
 
             console.log('PERCENT: ', percent);
+        } else {
+            console.warn(data.toString());
         }
     });
 
