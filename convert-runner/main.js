@@ -29,11 +29,11 @@ var allowQualities = [
 
 var execCommand = 'ffmpeg';
 
-var VIDEO_PATTERN = '-vcodec libx264 -preset medium -s {RESOLUTION} -acodec libmp3lame -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif {FILENAME}';
-var IMAGE_PATTERN = '-f image2 -filter:v yadif -ss {TIME} -vcodec mjpeg -vframes 1 {FILENAME}';
+var VIDEO_PATTERN = '-vcodec libx264 -preset medium -s {RESOLUTION} -acodec libmp3lame -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif';
+var IMAGE_PATTERN = '-f image2 -ss {TIME} -vcodec mjpeg -vframes 1 -filter:v yadif';
 
 function processVideoFile(fileName, outputDir) {
-    getInfo(fileName)
+    getInfo(fileName, outputDir)
         .then(function(details) {
 
             var outputFiles = [];
@@ -45,8 +45,8 @@ function processVideoFile(fileName, outputDir) {
                     var configString =
                         VIDEO_PATTERN
                             .replace('{RESOLUTION}', '' + (quality.height * aspectRation) + 'x' + quality.height)
-                            .replace('{BITRATE}', quality.bitrate)
-                            .replace('{FILENAME}', outputDir + '/video_' + quality.height + '.mp4');
+                            .replace('{BITRATE}', quality.bitrate) +
+                        ',crop=' + details.crop + ' ' + outputDir + '/video_' + quality.height + '.mp4';
 
                     outputFiles.push(configString);
                 }
@@ -57,15 +57,15 @@ function processVideoFile(fileName, outputDir) {
             for (var i = 1; i <= PREVIEW_COUNT; ++i) {
                 var configString =
                     IMAGE_PATTERN
-                        .replace('{TIME}', Math.round(delta * i))
-                        .replace('{FILENAME}', outputDir + '/preview_' + i + '.jpg');
+                        .replace('{TIME}', Math.round(delta * i)) +
+                    ',crop=' + details.crop + ' ' + outputDir + '/preview_' + i + '.jpg';
 
                 outputFiles.push(configString);
 
                 var configStringMini = '-s 96x54 ' +
                     IMAGE_PATTERN
-                        .replace('{TIME}', Math.round(delta * i) )
-                        .replace('{FILENAME}', outputDir + '/preview_' + i + '_m.jpg');
+                        .replace('{TIME}', Math.round(delta * i)) +
+                    ',crop=' + details.crop + ' ' + outputDir + '/preview_' + i + '_m.jpg';
 
                 outputFiles.push(configStringMini);
             }
@@ -119,48 +119,75 @@ function runFFMpeg(details, fileName, optionsString) {
 
 
 
-function getInfo(fileName) {
+function getInfo(fileName, outputDir) {
     return new Promise(function(resolve, reject) {
         var DURATION_RX = /^ {2}Duration: (\d\d:\d\d:\d\d\.\d\d),/;
         var RESOLUTION_RX = /^ {4}Stream.*Video:.* (\d+)x(\d+) \[/;
+        //[Parsed_cropdetect_0 @ 0x7f8391d00480] x1:3 x2:719 y1:72 y2:503 w:704 h:432 x:10 y:72 pts:61200 t:0.680000 crop=704:432:10:72
+        var CROP_RX = /\[Parsed_cropdetect_.* crop=(\d+:\d+:\d+:\d+)/;
 
-        var ffmpeg = childProcess.spawn(execCommand, ('-hide_banner -i ' + fileName).split(' '));
+        var params = '-hide_banner -y -i ' + fileName + ' ' + VIDEO_PATTERN
+                .replace(' -s {RESOLUTION}', '')
+                .replace('{BITRATE}', 3000) +
+            ' -ss 1 -vframes 1 -vf cropdetect ' + outputDir + '/__tmp.mp4';
+
+        console.log(params);
+
+        var ffmpeg = childProcess.spawn(execCommand, params.split(' '));
+
+        var isFirstData = true;
+
+        var details = {};
 
         ffmpeg.stdin.end();
 
         ffmpeg.stderr.on('data', function(buffer) {
 
-            var details = {};
+            buffer = buffer.toString();
 
-            var lines = buffer.toString().split('\n');
+            if (isFirstData) {
+                isFirstData = false;
 
-            var durationMatch = DURATION_RX.exec(lines[1]);
+                var lines = buffer.split('\n');
 
-            if (durationMatch) {
-                details.duration = parseTime(durationMatch[1]);
-            }
+                var durationMatch = DURATION_RX.exec(lines[1]);
 
-            for (var i = 2; i < lines.length; ++i) {
-                var line = lines[i];
+                if (durationMatch) {
+                    details.duration = parseTime(durationMatch[1]);
+                }
 
-                var match = RESOLUTION_RX.exec(line);
+                for (var i = 2; i < lines.length; ++i) {
+                    var line = lines[i];
 
-                if (match) {
-                    details.resolution = {
-                        width: Number(match[1]),
-                        height: Number(match[2])
-                    };
-                    break;
+                    var match = RESOLUTION_RX.exec(line);
+
+                    if (match) {
+                        details.resolution = {
+                            width: Number(match[1]),
+                            height: Number(match[2])
+                        };
+                        break;
+                    }
+                }
+
+            } else {
+                var cropMatch = CROP_RX.exec(buffer);
+
+                if (cropMatch) {
+                    details.crop = cropMatch[1];
                 }
             }
 
-            if (details.duration && details.resolution) {
+        });
+
+        ffmpeg.on('exit', function(errorCode) {
+            if (errorCode === 0 && details.duration && details.resolution && details.crop) {
                 resolve(details);
             } else {
                 reject();
             }
+        })
 
-        });
     });
 }
 
