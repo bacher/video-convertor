@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script type="text/javascript" src="jwplayer/jwplayer.js"></script>
+    <script type="text/javascript">jwplayer.key="rSAzksg40HXVeHzbReJ52yK8OlIsEISlumygkQ==";</script>
+</head>
+<body>
+
+    <div id="myElement">Loading the player...</div>
+
+    <script type="text/javascript">
+
+        var file = 'fwvideo';
+
+        var match = /[?&]v=([^&]*)/.exec(location.search);
+
+        if (match) {
+            file = match[1];
+        }
+
+        jwplayer('myElement').setup({
+            file: '/video/' + file + '.mp4',
+            image: '/video/preview1.jpg',
+            //primary: 'flash',
+            startparam: 'start'
+        });
+    </script>
+
+</body>
+</html>
