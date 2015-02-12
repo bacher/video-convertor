@@ -1,6 +1,7 @@
 
 var childProcess = require('child_process');
 require('es6-promise').polyfill();
+var fs = require('fs');
 
 var PREVIEW_COUNT = 9;
 
@@ -70,14 +71,14 @@ function processVideoFile(fileName, outputDir) {
                 outputFiles.push(configStringMini);
             }
 
-            runFFMpeg(details, fileName, outputFiles.join(' '));
+            runFFMpeg(details, fileName, outputFiles.join(' '), outputDir);
         });
 
 }
 
 processVideoFile('../video/news1_1m.mpg', '../video/out');
 
-function runFFMpeg(details, fileName, optionsString) {
+function runFFMpeg(details, fileName, optionsString, outputDir) {
 
     // Example:
     // frame= 1443 fps= 34 q=-1.0 Lq=-1.0 size=   18925kB time=00:01:00.04 bitrate=2582.1kbits/s dup=24 drop=116
@@ -88,6 +89,8 @@ function runFFMpeg(details, fileName, optionsString) {
     var options = '-hide_banner -y -i ' + fileName + ' ' + optionsString;
 
     console.warn(options);
+
+    fs.writeFileSync(outputDir + '/ffmpeg-run.txt', 'ffmpeg ' + options);
 
     var ffmpeg = childProcess.spawn(execCommand, options.split(' '));
 

@@ -1,4 +1,4 @@
 .idea/
 video/*
-*/video/*
+*/video/
 convert-runner/node_modules/
