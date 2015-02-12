@@ -1,15 +1,50 @@
 
 const CHECK_DELAY = 2000;
 const UPLOAD_PATH = '/Users/Bacher/tmp/movie-upload';
-const NEW_PATH = '/Users/Bacher/tmp/movie-ready';
+const PUBLIC_PATH = '/Users/Bacher/tmp/movie-www';
+
+process.chdir(PUBLIC_PATH);
 
 var fs = require('fs');
 var Path = require('path');
 
 var FolderAnalyser = require('./folder-analyser');
+var DBVideo = require('./db-video');
+var VideoUtils = require('./ffmpeg-runner');
 
-var analyser = new FolderAnalyser();
+var folderAnalyser = null;
 
-analyser.startWatch(UPLOAD_PATH, CHECK_DELAY, function(fileName) {
-    fs.renameSync(Path.join(UPLOAD_PATH, fileName), Path.join(NEW_PATH, fileName));
-});
+DBVideo.connect({
+    host: 'localhost',
+    database: 'test',
+    table: 'videos'
+}).then(
+    function() {
+        folderAnalyser = new FolderAnalyser();
+
+        folderAnalyser.startWatch(UPLOAD_PATH, CHECK_DELAY, onVideoUploaded);
+    },
+    function(err) {
+        console.log(err);
+    }
+);
+
+function onVideoUploaded(fileName) {
+    DBVideo.createNewVideo().then(function(id) {
+        var videoRootPath = Path.join(PUBLIC_PATH, id);
+        var videosPath = Path.join(videoRootPath, 'videos');
+        var imagesPath = Path.join(videoRootPath, 'images');
+
+        var uploadFileName = 'upload' + Path.extname(fileName);
+
+        fs.mkdirSync(videoRootPath);
+        fs.mkdirSync(videosPath);
+        fs.mkdirSync(imagesPath);
+
+        fs.renameSync(Path.join(UPLOAD_PATH, fileName), Path.join(videoRootPath, uploadFileName));
+
+        VideoUtils.startProcess(id, uploadFileName);
+    }).catch(function(e) {
+        console.log('EEEEE', e);
+    });
+}

@@ -1,6 +1,7 @@
 
 var fs = require('fs');
 var Path = require('path');
+var Promise = require('es6-promise').Promise;
 
 function FolderAnalyser() {
 
