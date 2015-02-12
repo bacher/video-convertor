@@ -4,160 +4,153 @@ var Promise = require('es6-promise').Promise;
 var fs = require('fs');
 var Path = require('path');
 var DBVideo = require('./db-video');
+var ffmpegHelper = require('./ffmpeg-helper');
 
 var PREVIEW_COUNT = 9;
 
 var start = Number(new Date());
 
-var allowQualities = [
-    {
-        height: 240,
-        bitrate: 200
-    },
-    {
-        height: 360,
-        bitrate: 300
-    },
-    {
-        height: 480,
-        bitrate: 500
-    },
-    {
-        height: 720,
-        bitrate: 1000
-    },
-    {
-        height: 1080,
-        bitrate: 2000
-    }
-];
-
 var ffmpegExec = 'ffmpeg';
 var mp4boxExec = 'MP4Box';
-
-var VIDEO_PATTERN = '-vcodec {VIDEO_CODEC} -preset medium -s {RESOLUTION} -acodec {AUDIO_CODEC} -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif';
-var IMAGE_PATTERN = '-f image2 -ss {TIME} -vcodec mjpeg -vframes 1 -filter:v yadif';
 
 function processVideoFile(path, uploadVideoName) {
 
     var fileName = Path.join(path, uploadVideoName);
 
-    getInfo(fileName).then(
-        function(details) {
-            var outputFiles = [];
-            var outputFileNames = [];
+    getInfo(fileName).then(function(details) {
+        var outputParams = [];
+        var outputMp4Names = [];
 
-            var aspectRation = details.resolution.width / details.resolution.height;
+        var aspectRation = details.resolution.width / details.resolution.height;
+        var filters = 'yadif,crop=' + details.crop;
 
-            allowQualities.forEach(function(quality) {
-                if (quality.height <= details.resolution.height) {
-                    var newFileName = 'video_' + quality.height;
+        ffmpegHelper.ALLOWED_QUALITIES.forEach(function(quality) {
+            if (quality.height <= details.resolution.height) {
 
-                    var configString =
-                        VIDEO_PATTERN
-                            .replace('{VIDEO_CODEC}', 'libx264')
-                            .replace('{AUDIO_CODEC}', 'libmp3lame')
-                            .replace('{RESOLUTION}', '' + (quality.height * aspectRation) + 'x' + quality.height)
-                            .replace('{BITRATE}', quality.bitrate) +
-                        ',crop=' + details.crop + ' ' + path + '/videos/' + newFileName + '.mp4' +
-                        ' ' +
-                        VIDEO_PATTERN
-                            .replace('{VIDEO_CODEC}', 'libvpx')
-                            .replace('{AUDIO_CODEC}', 'libvorbis')
-                            .replace('{RESOLUTION}', '' + (quality.height * aspectRation) + 'x' + quality.height)
-                            .replace('{BITRATE}', quality.bitrate) +
-                        ',crop=' + details.crop + ' ' + path + '/videos/' + newFileName + '.webm';
+                var newFileName = 'video_' + quality.height;
 
-                    outputFiles.push(configString);
+                var size = '' + (quality.height * aspectRation) + 'x' + quality.height;
 
-                    outputFileNames.push(newFileName + '.mp4');
-                }
-            });
+                outputParams.push(ffmpegHelper.makeParams({
+                    's': size,
+                    'codec:v': 'libx264',
+                    'b:v': quality.bitrate,
+                    'filter:v': filters,
+                    'codec:a': 'libmp3lame',
+                    'b:a': 120,
+                    'file': path + '/videos/' + newFileName + '_.mp4'
+                }));
 
-            var delta = details.duration / (PREVIEW_COUNT + 1);
+                outputParams.push(ffmpegHelper.makeParams({
+                    's': size,
+                    'codec:v': 'libvpx',
+                    'b:v': quality.bitrate,
+                    'filter:v': filters,
+                    'codec:a': 'libvorbis',
+                    'b:a': 120,
+                    'file': path + '/videos/' + newFileName + '.webm'
+                }));
 
-            for (var i = 1; i <= PREVIEW_COUNT; ++i) {
-                var configString =
-                    IMAGE_PATTERN
-                        .replace('{TIME}', Math.round(delta * i)) +
-                    ',crop=' + details.crop + ' ' + path + '/images/preview_' + i + '.jpg';
-
-                outputFiles.push(configString);
-
-                var configStringMini = '-s 96x54 ' +
-                    IMAGE_PATTERN
-                        .replace('{TIME}', Math.round(delta * i)) +
-                    ',crop=' + details.crop + ' ' + path + '/images/preview_' + i + '_m.jpg';
-
-                outputFiles.push(configStringMini);
+                outputMp4Names.push(newFileName);
             }
+        });
 
-            runFFMpeg(details, fileName, outputFiles.join(' '), path, outputFileNames);
-        },
-        function(err) {
-            console.log('Err', err);
+        var delta = details.duration / (PREVIEW_COUNT + 1);
+
+        for (var i = 1; i <= PREVIEW_COUNT; ++i) {
+
+            var time = Math.round(delta * i);
+
+            outputParams.push(ffmpegHelper.makeParams({
+                'type': 'image',
+                'ss': time,
+                'filter:v': filters,
+                'file': path + '/images/preview_' + i + '.jpg'
+            }));
+
+            outputParams.push(ffmpegHelper.makeParams({
+                'type': 'image',
+                'ss': time,
+                'filter:v': filters,
+                'file': path + '/images/preview_' + i + '_m.jpg',
+                's': '96x54'
+            }));
         }
-    );
+
+        runFFMpeg(details, fileName, outputParams.join(' '), path, outputMp4Names);
+
+    }).catch(function(err) {
+        console.log('Err', err);
+    });
 
 }
 
 function runFFMpeg(details, fileName, optionsString, path, outputFileNames) {
+    return new Promise(function(resolve, reject) {
 
-    // Example:
-    // frame= 1443 fps= 34 q=-1.0 Lq=-1.0 size=   18925kB time=00:01:00.04 bitrate=2582.1kbits/s dup=24 drop=116
-    var NOTIFY_RX = /^frame= .* time=(\d\d:\d\d:\d\d\.\d\d)/;
+        // Example:
+        // frame= 1443 fps= 34 q=-1.0 Lq=-1.0 size=   18925kB time=00:01:00.04 bitrate=2582.1kbits/s dup=24 drop=116
+        var NOTIFY_RX = /^frame= .* time=(\d\d:\d\d:\d\d\.\d\d)/;
 
-    var percent = 0;
+        var percent = 0;
 
-    var options = '-hide_banner -y -i ' + fileName + ' ' + optionsString;
+        var options = ffmpegHelper.makeHeadParams() + ' -i ' + fileName + ' ' + optionsString;
 
-    fs.writeFileSync(path + '/ffmpeg-run.txt', 'ffmpeg ' + options);
+        fs.writeFileSync(path + '/ffmpeg-run.txt', 'ffmpeg ' + options);
 
-    var ffmpeg = childProcess.spawn(ffmpegExec, options.split(' '));
-
-    ffmpeg.stdin.end();
-
-    ffmpeg.stderr.on('data', function(data) {
-        var notifyMatch = NOTIFY_RX.exec(data);
-
-        if (notifyMatch) {
-            var currentSecond = parseTime(notifyMatch[1]);
-
-            var newPercent = Math.round(100 * currentSecond / details.duration);
-
-            if (percent !== newPercent) {
-                percent = newPercent;
-
-                console.log('PERCENT: ', percent);
-
-                DBVideo.updateVideoState(path, percent);
-            }
-
-        } else {
-            console.warn(data.toString());
-        }
-    });
-
-    ffmpeg
-        .on('exit', function(errorCode) {
-            if (errorCode === 0) {
-
-                runMP4Box(path + '/videos', outputFileNames);
-
-            }
-        })
-        .on('error', function(err) {
-            console.warn('FFMPEG ERROR:', err);
+        var ffmpeg = childProcess.spawn(ffmpegExec, options.split(' '), {
+            stdio: [
+                'ignore',
+                'ignore',
+                'pipe'
+            ]
         });
 
+        ffmpeg.stderr.on('data', function(data) {
+            var notifyMatch = NOTIFY_RX.exec(data);
+
+            if (notifyMatch) {
+                var currentSecond = parseTime(notifyMatch[1]);
+
+                var newPercent = Math.round(100 * currentSecond / details.duration);
+
+                if (percent !== newPercent) {
+                    percent = newPercent;
+
+                    DBVideo.updateVideoState(path, percent);
+                }
+
+            }
+        });
+
+        ffmpeg
+            .on('exit', function(errorCode) {
+                if (errorCode === 0) {
+
+                    runMP4Box(path + '/videos', outputFileNames)
+                        .then(function() {
+                            resolve();
+                        })
+                        .catch(function(err) {
+                            reject(err);
+                        });
+                }
+            })
+            .on('error', function(err) {
+                console.warn('FFMPEG ERROR:', err);
+            });
+
+    });
 }
 
 function runMP4Box(outputDir, mp4Files) {
-
-    Promise.all(mp4Files.map(function(mp4File) {
-
+    return Promise.all(mp4Files.map(function(mp4File) {
         return new Promise(function(resolve, reject) {
-            var options = '-add ' + outputDir + '/' + mp4File + ' ' + outputDir + '/' + mp4File.replace('.mp4', '_w.mp4');
+
+            var inputFile = outputDir + '/' + mp4File + '_.mp4';
+            var outputFile = outputDir + '/' + mp4File + '.mp4';
+
+            var options = '-add ' + inputFile + ' ' + outputFile;
             var mp4box = childProcess.spawn(mp4boxExec, options.split(' '));
 
             mp4box.stdin.end();
@@ -165,6 +158,9 @@ function runMP4Box(outputDir, mp4Files) {
             mp4box
                 .on('exit', function(errorCode) {
                     if (errorCode === 0) {
+
+                        fs.unlinkSync(inputFile);
+
                         resolve();
                     } else {
                         reject();
@@ -175,27 +171,33 @@ function runMP4Box(outputDir, mp4Files) {
                     reject();
                 });
         });
-    })).then(function() {
-        console.log('===END===', new Date() - start);
-
-    }, function() {
-        console.warn('===ERROR===');
-    });
+    }));
 }
 
 function getInfo(fileName) {
     return new Promise(function(resolve, reject) {
 
-        var params = '-hide_banner -y -i ' + fileName + ' ' + VIDEO_PATTERN
-                .replace('{VIDEO_CODEC}', 'libx264')
-                .replace('{AUDIO_CODEC}', 'libmp3lame')
-                .replace(' -s {RESOLUTION}', '')
-                .replace('{BITRATE}', 3000) +
-            ' -ss 00.50 -vframes 1 -vf cropdetect ' + Path.resolve(fileName, '../__tmp.mp4');
+        var outputFile = Path.resolve(fileName, '../__tmp.mp4');
 
-        var ffmpeg = childProcess.spawn(ffmpegExec, params.split(' '));
+        var params =
+            ffmpegHelper.makeHeadParams() +
+            ' -i ' + fileName + ' ' +
+            ffmpegHelper.makeParams({
+                'codec:v': 'libx264',
+                'codec:a': 'libmp3lame',
+                'ss': '00.50',
+                'vframes': 1,
+                'filter:v': 'cropdetect',
+                'file': outputFile
+            });
 
-        ffmpeg.stdin.end();
+        var ffmpeg = childProcess.spawn(ffmpegExec, params.split(' '), {
+            stdio: [
+                'ignore',
+                'ignore',
+                'pipe'
+            ]
+        });
 
         var outBuffers = [];
 
@@ -205,6 +207,9 @@ function getInfo(fileName) {
 
         ffmpeg.on('exit', function(errorCode) {
             if (errorCode === 0) {
+
+                fs.unlinkSync(outputFile);
+
                 var output = outBuffers.join('');
 
                 var details = extractDetails(output);
