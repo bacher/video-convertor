@@ -5,6 +5,8 @@ var fs = require('fs');
 
 var PREVIEW_COUNT = 9;
 
+var start = Number(new Date());
+
 var allowQualities = [
     {
         height: 240,
@@ -29,8 +31,9 @@ var allowQualities = [
 ];
 
 var execCommand = 'ffmpeg';
+var mp4boxExec = 'MP4Box';
 
-var VIDEO_PATTERN = '-vcodec libx264 -preset medium -s {RESOLUTION} -acodec libmp3lame -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif';
+var VIDEO_PATTERN = '-vcodec {VIDEO_CODEC} -preset medium -s {RESOLUTION} -acodec {AUDIO_CODEC} -ab 128k -b:v {BITRATE}k -r 24 -filter:v yadif';
 var IMAGE_PATTERN = '-f image2 -ss {TIME} -vcodec mjpeg -vframes 1 -filter:v yadif';
 
 function processVideoFile(fileName, outputDir) {
@@ -38,18 +41,32 @@ function processVideoFile(fileName, outputDir) {
         .then(function(details) {
 
             var outputFiles = [];
+            var outputFileNames = [];
 
             var aspectRation = details.resolution.width / details.resolution.height;
 
             allowQualities.forEach(function(quality) {
                 if (quality.height <= details.resolution.height) {
+                    var newFileName = 'video_' + quality.height;
+
                     var configString =
                         VIDEO_PATTERN
+                            .replace('{VIDEO_CODEC}', 'libx264')
+                            .replace('{AUDIO_CODEC}', 'libmp3lame')
                             .replace('{RESOLUTION}', '' + (quality.height * aspectRation) + 'x' + quality.height)
                             .replace('{BITRATE}', quality.bitrate) +
-                        ',crop=' + details.crop + ' ' + outputDir + '/video_' + quality.height + '.mp4';
+                        ',crop=' + details.crop + ' ' + outputDir + '/' + newFileName + '.mp4' +
+                        ' ' +
+                        VIDEO_PATTERN
+                            .replace('{VIDEO_CODEC}', 'libvpx')
+                            .replace('{AUDIO_CODEC}', 'libvorbis')
+                            .replace('{RESOLUTION}', '' + (quality.height * aspectRation) + 'x' + quality.height)
+                            .replace('{BITRATE}', quality.bitrate) +
+                        ',crop=' + details.crop + ' ' + outputDir + '/' + newFileName + '.webm';
 
                     outputFiles.push(configString);
+
+                    outputFileNames.push(newFileName + '.mp4');
                 }
             });
 
@@ -71,14 +88,14 @@ function processVideoFile(fileName, outputDir) {
                 outputFiles.push(configStringMini);
             }
 
-            runFFMpeg(details, fileName, outputFiles.join(' '), outputDir);
+            runFFMpeg(details, fileName, outputFiles.join(' '), outputDir, outputFileNames);
         });
 
 }
 
 processVideoFile('../video/news1_1m.mpg', '../video/out');
 
-function runFFMpeg(details, fileName, optionsString, outputDir) {
+function runFFMpeg(details, fileName, optionsString, outputDir, outputFileNames) {
 
     // Example:
     // frame= 1443 fps= 34 q=-1.0 Lq=-1.0 size=   18925kB time=00:01:00.04 bitrate=2582.1kbits/s dup=24 drop=116
@@ -111,15 +128,50 @@ function runFFMpeg(details, fileName, optionsString, outputDir) {
     });
 
     ffmpeg
-        .on('exit', function(data) {
-            console.log('===END===', data);
+        .on('exit', function(errorCode) {
+            if (errorCode === 0) {
+
+                runMP4Box(outputDir, outputFileNames);
+
+            }
         })
         .on('error', function(err) {
-            console.log('ERROR:', err);
+            console.warn('FFMPEG ERROR:', err);
         });
 
 }
 
+
+function runMP4Box(outputDir, mp4Files) {
+
+    Promise.all(mp4Files.map(function(mp4File) {
+
+        return new Promise(function(resolve, reject) {
+            var options = '-add ' + outputDir + '/' + mp4File + ' ' + outputDir + '/' + mp4File.replace('.mp4', '_w.mp4');
+            var mp4box = childProcess.spawn(mp4boxExec, options.split(' '));
+
+            mp4box.stdin.end();
+
+            mp4box
+                .on('exit', function(errorCode) {
+                    if (errorCode === 0) {
+                        resolve();
+                    } else {
+                        reject();
+                    }
+                })
+                .on('error', function(err) {
+                    console.warn('MP4Box ERROR:', err);
+                    reject();
+                });
+        });
+    })).then(function() {
+        console.log('===END===', new Date() - start);
+
+    }, function() {
+        console.warn('===ERROR===');
+    });
+}
 
 
 function getInfo(fileName, outputDir) {
@@ -130,6 +182,8 @@ function getInfo(fileName, outputDir) {
         var CROP_RX = /\[Parsed_cropdetect_.* crop=(\d+:\d+:\d+:\d+)/;
 
         var params = '-hide_banner -y -i ' + fileName + ' ' + VIDEO_PATTERN
+                .replace('{VIDEO_CODEC}', 'libx264')
+                .replace('{AUDIO_CODEC}', 'libmp3lame')
                 .replace(' -s {RESOLUTION}', '')
                 .replace('{BITRATE}', 3000) +
             ' -ss 1 -vframes 1 -vf cropdetect ' + outputDir + '/__tmp.mp4';
