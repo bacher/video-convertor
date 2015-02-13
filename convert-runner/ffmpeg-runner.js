@@ -22,33 +22,36 @@ function processVideoFile(path, uploadVideoName) {
         var outputParams = [];
         var outputMp4Names = [];
 
-        var aspectRation = details.resolution.width / details.resolution.height;
-        var filters = 'yadif,crop=' + details.crop;
+        var filters = 'crop=' + details.crop + ',yadif';
 
         ffmpegHelper.ALLOWED_QUALITIES.forEach(function(quality) {
             if (quality.height <= details.resolution.height) {
 
                 var newFileName = 'video_' + quality.height;
 
-                var size = '' + (quality.height * aspectRation) + 'x' + quality.height;
+                var size = (quality.height * 2) + ':' + quality.height;
 
                 outputParams.push(ffmpegHelper.makeParams({
-                    's': size,
+                    'profile': quality.mp4.profile,
+                    'preset': quality.mp4.preset,
                     'codec:v': 'libx264',
                     'b:v': quality.bitrate,
-                    'filter:v': filters,
+                    'filter:v': filters + ',scale=' + size,
                     'codec:a': 'libmp3lame',
                     'b:a': 120,
+                    'bufsize': quality.bitrate * 2,
                     'file': path + '/videos/' + newFileName + '_.mp4'
                 }));
 
                 outputParams.push(ffmpegHelper.makeParams({
-                    's': size,
+                    'quality': quality.webm.quality,
+                    'cpu-used': quality.webm.cpu,
                     'codec:v': 'libvpx',
                     'b:v': quality.bitrate,
-                    'filter:v': filters,
+                    'filter:v': filters + ',scale=' + size,
                     'codec:a': 'libvorbis',
                     'b:a': 120,
+                    'bufsize': quality.bitrate * 2,
                     'file': path + '/videos/' + newFileName + '.webm'
                 }));
 
@@ -72,13 +75,15 @@ function processVideoFile(path, uploadVideoName) {
             outputParams.push(ffmpegHelper.makeParams({
                 'type': 'image',
                 'ss': time,
-                'filter:v': filters,
-                'file': path + '/images/preview_' + i + '_m.jpg',
-                's': '96x54'
+                'filter:v': filters + ',scale=96x54',
+                'file': path + '/images/preview_' + i + '_m.jpg'
             }));
         }
 
-        runFFMpeg(details, fileName, outputParams.join(' '), path, outputMp4Names);
+        runFFMpeg(details, fileName, outputParams.join(' '), path, outputMp4Names)
+            .catch(function(err) {
+                console.log(err);
+            });
 
     }).catch(function(err) {
         console.log('Err', err);
@@ -107,7 +112,11 @@ function runFFMpeg(details, fileName, optionsString, path, outputFileNames) {
             ]
         });
 
+        var outputBuffer = [];
+
         ffmpeg.stderr.on('data', function(data) {
+            outputBuffer.push(data);
+
             var notifyMatch = NOTIFY_RX.exec(data);
 
             if (notifyMatch) {
@@ -120,7 +129,6 @@ function runFFMpeg(details, fileName, optionsString, path, outputFileNames) {
 
                     DBVideo.updateVideoState(path, percent);
                 }
-
             }
         });
 
@@ -135,6 +143,12 @@ function runFFMpeg(details, fileName, optionsString, path, outputFileNames) {
                         .catch(function(err) {
                             reject(err);
                         });
+                } else {
+                    reject({
+                        app: 'ffmpeg',
+                        errorCode: errorCode,
+                        output: outputBuffer.join('')
+                    });
                 }
             })
             .on('error', function(err) {
@@ -184,6 +198,8 @@ function getInfo(fileName) {
             ffmpegHelper.makeHeadParams() +
             ' -i ' + fileName + ' ' +
             ffmpegHelper.makeParams({
+                'profile': 'high',
+                'preset': 'veryfast',
                 'codec:v': 'libx264',
                 'codec:a': 'libmp3lame',
                 'ss': '00.50',

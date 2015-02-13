@@ -5,23 +5,33 @@ var Helpers = {};
 Helpers.ALLOWED_QUALITIES = [
     {
         height: 240,
-        bitrate: 200
+        bitrate: 200,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
     },
     {
         height: 360,
-        bitrate: 300
+        bitrate: 300,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
     },
     {
         height: 480,
-        bitrate: 500
+        bitrate: 500,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
     },
     {
         height: 720,
-        bitrate: 1000
+        bitrate: 1000,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
     },
     {
         height: 1080,
-        bitrate: 2000
+        bitrate: 2000,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
     }
 ];
 
@@ -30,11 +40,13 @@ var FFMPEG_VIDEO_OPTIONS = [
         name: 'profile'
     },
     {
-        name: 'preset',
-        default: 'medium'
+        name: 'preset'
     },
     {
-        name: 's'
+        name: 'quality'
+    },
+    {
+        name: 'cpu-used'
     },
     {
         name: 'ss'
@@ -70,7 +82,8 @@ var FFMPEG_VIDEO_OPTIONS = [
         name: 'maxrate'
     },
     {
-        name: 'bufsize'
+        name: 'bufsize',
+        suffix: 'k'
     }
 ];
 
