@@ -1,9 +1,10 @@
+'use strict';
 
 function start() {
 
-    const CHECK_DELAY = 2000;
-    const UPLOAD_PATH = '/Users/Bacher/tmp/movie-upload';
-    const PUBLIC_PATH = '/Users/Bacher/tmp/movie-www';
+    var CHECK_DELAY = 2000;
+    var UPLOAD_PATH = '/Users/Bacher/tmp/movie-upload';
+    var PUBLIC_PATH = '/Users/Bacher/tmp/movie-www';
 
     process.chdir(PUBLIC_PATH);
 
@@ -43,7 +44,10 @@ function start() {
             fs.mkdirSync(videosPath);
             fs.mkdirSync(imagesPath);
 
-            fs.renameSync(Path.join(UPLOAD_PATH, fileName), Path.join(videoRootPath, uploadFileName));
+            fs.renameSync(
+                Path.join(UPLOAD_PATH, fileName),
+                Path.join(videoRootPath, uploadFileName)
+            );
 
             VideoUtils.startProcess(id, uploadFileName);
         }).catch(function(e) {

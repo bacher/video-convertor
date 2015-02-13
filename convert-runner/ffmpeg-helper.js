@@ -1,3 +1,4 @@
+'use strict';
 
 var Helpers = {};
 
@@ -24,7 +25,7 @@ Helpers.ALLOWED_QUALITIES = [
     }
 ];
 
-const FFMPEG_VIDEO_OPTIONS = [
+var FFMPEG_VIDEO_OPTIONS = [
     {
         name: 'profile'
     },
@@ -73,7 +74,7 @@ const FFMPEG_VIDEO_OPTIONS = [
     }
 ];
 
-const FFMPEG_IMAGE_OPTIONS = [
+var FFMPEG_IMAGE_OPTIONS = [
     {
         name: 'f',
         default: 'image2'
@@ -114,7 +115,7 @@ Helpers.makeParams = function(options) {
         var paramValue = null;
 
         if (option.name in options) {
-            paramValue = options[option.name]
+            paramValue = options[option.name];
         } else if (option.default) {
             paramValue = option.default;
         } else if (option.require) {

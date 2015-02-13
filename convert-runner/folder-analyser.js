@@ -1,7 +1,8 @@
+'use strict';
 
 var fs = require('fs');
 var Path = require('path');
-var Promise = require('es6-promise').Promise;
+var Promise = require('es6-promise').Promise; // jshint ignore:line
 
 function FolderAnalyser() {
 
@@ -21,11 +22,7 @@ FolderAnalyser.prototype.stopWatch = function() {
 FolderAnalyser.prototype._checkFolder = function(folderPath, callback) {
     var that = this;
 
-    fs.readdirSync(folderPath).filter(function(fileName) {
-        //return /\.mpg$/.test(fileName);
-        return true;
-
-    }).forEach(function(fileName) {
+    fs.readdirSync(folderPath).forEach(function(fileName) {
 
         var filePath = Path.join(folderPath, fileName);
 

@@ -1,6 +1,7 @@
+'use strict';
 
 var childProcess = require('child_process');
-var Promise = require('es6-promise').Promise;
+var Promise = require('es6-promise').Promise; // jshint ignore:line
 var fs = require('fs');
 var Path = require('path');
 var DBVideo = require('./db-video');
@@ -224,7 +225,7 @@ function getInfo(fileName) {
                     errorCode: errorCode
                 });
             }
-        })
+        });
 
     });
 }

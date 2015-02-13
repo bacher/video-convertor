@@ -1,5 +1,7 @@
+'use strict';
+
 var mysql = require('mysql');
-var Promise = require('es6-promise').Promise;
+var Promise = require('es6-promise').Promise; // jshint ignore:line
 
 var DBVideo = {
     connect: function(options) {
@@ -29,18 +31,24 @@ var DBVideo = {
         return new Promise(function(resolve, reject) {
             var hash = createHash(6);
 
-            DBVideo._connection.query('INSERT INTO `' + DBVideo._table + '` VALUES("' + hash + '", 0)', function(err, rows) {
-                if (err) {
-                    reject();
-                } else {
-                    resolve(hash);
+            DBVideo._connection.query(
+                'INSERT INTO ?? VALUES(?, 0)', [DBVideo._table, hash],
+                function(err) {
+                    if (err) {
+                        reject();
+                    } else {
+                        resolve(hash);
+                    }
                 }
-            });
-        })
+            );
+        });
     },
     updateVideoState: function(hash, state) {
         return new Promise(function(resolve, reject) {
-            DBVideo._connection.query('UPDATE `' + DBVideo._table + '` SET state="' + state + '" WHERE `id`="' + hash + '"', resolveHelper(resolve, reject));
+            DBVideo._connection.query(
+                'UPDATE ?? SET `state` = ? WHERE `id` = ?', [DBVideo._table, state, hash],
+                resolveHelper(resolve, reject)
+            );
         });
     }
 };
@@ -62,7 +70,7 @@ function resolveHelper(resolve, reject) {
         } else {
             resolve();
         }
-    }
+    };
 }
 
 module.exports = DBVideo;
