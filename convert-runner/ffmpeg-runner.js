@@ -72,12 +72,6 @@ function processVideoFile(path, uploadVideoName) {
                 'file': path + '/images/preview_' + i + '.jpg'
             }));
 
-            outputParams.push(ffmpegHelper.makeParams({
-                'type': 'image',
-                'ss': time,
-                'filter:v': filters + ',scale=96x54',
-                'file': path + '/images/preview_' + i + '_m.jpg'
-            }));
         }
 
         runFFMpeg(details, fileName, outputParams.join(' '), path, outputMp4Names)
@@ -201,7 +195,7 @@ function getInfo(fileName) {
                 'profile': 'high',
                 'preset': 'veryfast',
                 'codec:v': 'libx264',
-                'codec:a': 'libmp3lame',
+                'codec:a': 'libvo_aacenc',
                 'ss': '00.50',
                 'vframes': 1,
                 'filter:v': 'cropdetect',

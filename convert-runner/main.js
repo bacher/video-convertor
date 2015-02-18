@@ -21,38 +21,37 @@ function start() {
         host: 'localhost',
         database: 'test',
         table: 'videos'
-    }).then(
-        function() {
-            folderAnalyser = new FolderAnalyser();
+    }).then(function() {
+        folderAnalyser = new FolderAnalyser();
 
-            folderAnalyser.startWatch(UPLOAD_PATH, CHECK_DELAY, onVideoUploaded);
-        },
-        function(err) {
-            console.log(err);
-        }
-    );
+        folderAnalyser.startWatch(UPLOAD_PATH, CHECK_DELAY, onVideoUploaded);
+    }).catch(function() {
+        process.stderr.write('Connection with MySQL is not established.\n');
+        process.exit(131);
+    });
 
     function onVideoUploaded(fileName) {
-        DBVideo.createNewVideo().then(function(id) {
-            var videoRootPath = Path.join(PUBLIC_PATH, id);
-            var videosPath = Path.join(videoRootPath, 'videos');
-            var imagesPath = Path.join(videoRootPath, 'images');
+        DBVideo.createNewVideo()
+            .then(function(id) {
+                var videoRootPath = Path.join(PUBLIC_PATH, id);
+                var videosPath = Path.join(videoRootPath, 'videos');
+                var imagesPath = Path.join(videoRootPath, 'images');
 
-            var uploadFileName = 'upload' + Path.extname(fileName);
+                var uploadFileName = 'upload' + Path.extname(fileName);
 
-            fs.mkdirSync(videoRootPath);
-            fs.mkdirSync(videosPath);
-            fs.mkdirSync(imagesPath);
+                fs.mkdirSync(videoRootPath);
+                fs.mkdirSync(videosPath);
+                fs.mkdirSync(imagesPath);
 
-            fs.renameSync(
-                Path.join(UPLOAD_PATH, fileName),
-                Path.join(videoRootPath, uploadFileName)
-            );
+                fs.renameSync(
+                    Path.join(UPLOAD_PATH, fileName),
+                    Path.join(videoRootPath, uploadFileName)
+                );
 
-            VideoUtils.startProcess(id, uploadFileName);
-        }).catch(function(e) {
-            console.log('EEEEE', e);
-        });
+                VideoUtils.startProcess(id, uploadFileName);
+            }).catch(function() {
+                process.stderr.write('MySQL Error\n');
+            });
     }
 }
 

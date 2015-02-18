@@ -6,7 +6,7 @@ if (cluster.isMaster) {
     startFork();
 
     cluster.on('exit', function(worker, code) {
-        console.log('Slave process ' + worker.process.pid + ' died, errorcode: ' + code);
+        console.log('Slave process died, errorcode: ' + code);
 
         setTimeout(startFork, 1000);
     });
