@@ -1,0 +1,12 @@
+{
+  "upload": "/Users/Bacher/tmp/movie-upload",
+  "public": "/Users/Bacher/tmp/movie-www",
+  "db": {
+    "host": "localhost",
+    "user": "",
+    "password": "",
+    "database": "test",
+    "table": "videos"
+  }
+
+}

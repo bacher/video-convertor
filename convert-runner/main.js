@@ -1,10 +1,16 @@
 'use strict';
 
-function start() {
+var logger = require('./logger');
+
+process.on('uncaughtException', function(e) {
+    logger.critical('main.js Global Error Caught', e);
+});
+
+function start(config) {
 
     var CHECK_DELAY = 2000;
-    var UPLOAD_PATH = '/Users/Bacher/tmp/movie-upload';
-    var PUBLIC_PATH = '/Users/Bacher/tmp/movie-www';
+    var UPLOAD_PATH = config['upload'];
+    var PUBLIC_PATH = config['public'];
 
     process.chdir(PUBLIC_PATH);
 
@@ -17,21 +23,21 @@ function start() {
 
     var folderAnalyser = null;
 
-    DBVideo.connect({
-        host: 'localhost',
-        database: 'test',
-        table: 'videos'
-    }).then(function() {
-        folderAnalyser = new FolderAnalyser();
+    DBVideo.connect(config['db'])
+        .then(function() {
+            logger.v('DB Connection is OK.');
 
-        folderAnalyser.startWatch(UPLOAD_PATH, CHECK_DELAY, onVideoUploaded);
-    }).catch(function() {
-        process.stderr.write('Connection with MySQL is not established.\n');
-        process.exit(131);
-    });
+            folderAnalyser = new FolderAnalyser();
+
+            folderAnalyser.startWatch(UPLOAD_PATH, CHECK_DELAY, onVideoUploaded);
+        })
+        .catch(function() {
+            logger.critical('Connection with MySQL is not established.');
+            process.exit(131);
+        });
 
     function onVideoUploaded(fileName) {
-        DBVideo.createNewVideo()
+        DBVideo.createNewVideo(fileName)
             .then(function(id) {
                 var videoRootPath = Path.join(PUBLIC_PATH, id);
                 var videosPath = Path.join(videoRootPath, 'videos');
@@ -48,15 +54,18 @@ function start() {
                     Path.join(videoRootPath, uploadFileName)
                 );
 
-                VideoUtils.startProcess(id, uploadFileName);
-            }).catch(function() {
-                process.stderr.write('MySQL Error\n');
+                try {
+                    VideoUtils.processVideoFile(id, uploadFileName);
+                } catch (e) {
+                    logger.error('startProcess failed (' + id + ').');
+                }
+            }, function() {
+                logger.error('DB Error (entry not created).');
+            }).catch(function(e) {
+                logger.error('Filesystem conflict.');
+                logger.log(e);
             });
     }
 }
 
-if (module.exports) {
-    module.exports = start;
-} else {
-    start();
-}
+module.exports = start;
