@@ -1,0 +1,113 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          videoconv
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Video-convertor
+# Description:       Video-convertor
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/bin
+DESC='Video-convertor'
+NAME=node
+SNAME=videoconv
+NODESCRIPT='/root/lib/video-convertor-master/convert-runner/master.js'
+DAEMON=/usr/local/bin/$NAME
+DAEMON_ARGS="$NODESCRIPT --outlog /var/log/videoconv --errlog /var/log/videoconv --config /root/videoconv.json"
+PIDFILE=/var/run/$SNAME.pid
+SCRIPTNAME=/etc/init.d/$SNAME
+
+[ -x "$DAEMON" ] || exit 0
+[ -r "$NODESCRIPT" ] || exit 0
+
+#[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+. /lib/lsb/init-functions
+
+do_start() {
+	start-stop-daemon -Sbmq -p $PIDFILE -x $DAEMON --test > /dev/null || return 1
+
+	start-stop-daemon -Sbmq -p $PIDFILE -x $DAEMON -- $DAEMON_ARGS || return 2
+}
+
+do_stop() {
+	# Return
+	#   0 if daemon has been stopped
+	#   1 if daemon was already stopped
+	#   2 if daemon could not be stopped
+	#   other if a failure occurred
+
+	start-stop-daemon -Kq --retry=TERM/30/KILL/5 -p $PIDFILE --name $NAME
+	RETVAL="$?"
+	[ "$RETVAL" = 2 ] && return 2
+
+	# Many daemons don't delete their pidfiles when they exit.
+	rm -f $PIDFILE
+	return "$RETVAL"
+}
+
+
+do_reload() {
+	return 9
+}
+
+case "$1" in
+  start)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+	do_start
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+	do_stop
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  status)
+       echo 'status' >> /root/init_d.log
+	   start-stop-daemon -Sbmq -p $PIDFILE -x $DAEMON --test > /dev/null && return 1
+       ;;
+  #reload|force-reload)
+	#
+	# If do_reload() is not implemented then leave this commented out
+	# and leave 'force-reload' as an alias for 'restart'.
+	#
+	#log_daemon_msg "Reloading $DESC" "$NAME"
+	#do_reload
+	#log_end_msg $?
+	#;;
+  restart|force-reload)
+	log_daemon_msg "Restarting $DESC" "$NAME"
+	do_stop
+	case "$?" in
+	  0|1)
+		do_start
+		case "$?" in
+			0) log_end_msg 0 ;;
+			1) log_end_msg 1 ;; # Old process is still running
+			*) log_end_msg 1 ;; # Failed to start
+		esac
+		;;
+	  *)
+	  	# Failed to stop
+		log_end_msg 1
+		;;
+	esac
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+	exit 3
+	;;
+esac
+
+:
