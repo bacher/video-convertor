@@ -33,7 +33,7 @@ function makeTranscodeParams(details, filters, dbFormats) {
                 'codec:v': 'libx264',
                 'b:v': quality.bitrate,
                 'filter:v': filters + ',scale=' + size,
-                'codec:a': 'libmp3lame',
+                'codec:a': 'libvo_aacenc',
                 'b:a': 120,
                 'bufsize': quality.bitrate * 2,
                 'movflags': 'faststart',

@@ -5,31 +5,31 @@ var Helpers = {};
 Helpers.ALLOWED_QUALITIES = [
     {
         height: 240,
-        bitrate: 200,
+        bitrate: 400,
         mp4: { profile: 'high', preset: 'medium' },
         webm: { quality: 'good', cpu: 4 }
     },
     {
         height: 360,
-        bitrate: 300,
-        mp4: { profile: 'high', preset: 'medium' },
-        webm: { quality: 'good', cpu: 4 }
-    },
-    {
-        height: 480,
-        bitrate: 500,
-        mp4: { profile: 'high', preset: 'medium' },
-        webm: { quality: 'good', cpu: 4 }
-    },
-    {
-        height: 720,
         bitrate: 1000,
         mp4: { profile: 'high', preset: 'medium' },
         webm: { quality: 'good', cpu: 4 }
     },
     {
+        height: 480,
+        bitrate: 2500,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
+    },
+    {
+        height: 720,
+        bitrate: 5000,
+        mp4: { profile: 'high', preset: 'medium' },
+        webm: { quality: 'good', cpu: 4 }
+    },
+    {
         height: 1080,
-        bitrate: 2000,
+        bitrate: 8000,
         mp4: { profile: 'high', preset: 'medium' },
         webm: { quality: 'good', cpu: 4 }
     }
