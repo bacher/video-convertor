@@ -17,7 +17,7 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
         // Example:
         // frame= 1443 fps= 34 q=-1.0 Lq=-1.0 size=   18925kB time=00:01:00.04 bitrate=2582.1kbits/s dup=24 drop=116
-        var NOTIFY_RX = /^frame= .* time=(\d\d:\d\d:\d\d\.\d\d)/;
+        var NOTIFY_RX = /frame=.* time=(\d\d:\d\d:\d\d\.\d\d)/;
 
         var percent = 0;
 
@@ -51,6 +51,8 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
                     if (percent !== newPercent) {
                         percent = newPercent;
+
+                        logger.v(details.id, 'Percent', newPercent);
 
                         DBVideo.updateVideoPercent(details.id, percent);
                     }

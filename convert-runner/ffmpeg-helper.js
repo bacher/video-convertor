@@ -84,6 +84,9 @@ var FFMPEG_VIDEO_OPTIONS = [
     {
         name: 'bufsize',
         suffix: 'k'
+    },
+    {
+        name: 'movflags'
     }
 ];
 

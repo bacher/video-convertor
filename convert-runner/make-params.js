@@ -15,7 +15,6 @@ function makeParams(details, params) {
     params.preview = makePreviewParams(details, filters);
 
     params.db = makeDbDetails(details, dbFormats);
-
 }
 
 function makeTranscodeParams(details, filters, dbFormats) {
@@ -37,9 +36,7 @@ function makeTranscodeParams(details, filters, dbFormats) {
                 'codec:a': 'libmp3lame',
                 'b:a': 120,
                 'bufsize': quality.bitrate * 2,
-
-                // TODO: Тут надо пофиксить
-                //'file': id + '/videos/' + newFileName + '_.mp4'
+                'movflags': 'faststart',
                 'file': details.id + '/videos/' + newFileName + '.mp4'
             }));
 
@@ -54,8 +51,6 @@ function makeTranscodeParams(details, filters, dbFormats) {
                 'bufsize': quality.bitrate * 2,
                 'file': details.id + '/videos/' + newFileName + '.webm'
             }));
-
-            //outputMp4Names.push(newFileName);
 
             dbFormats.push(quality.height);
         }

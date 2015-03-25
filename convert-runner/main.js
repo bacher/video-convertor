@@ -46,6 +46,7 @@ function start(config) {
                 var uploadFileName = 'upload' + Path.extname(fileName);
 
                 fs.mkdirSync(videoRootPath);
+
                 fs.mkdirSync(videosPath);
                 fs.mkdirSync(imagesPath);
 

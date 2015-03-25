@@ -1,6 +1,7 @@
 'use strict';
 
 var Path = require('path');
+var childProcess = require('child_process');
 var Promise = require('es6-promise').Promise; // jshint ignore:line
 
 var DBVideo = require('./db-video');
@@ -37,11 +38,6 @@ function processVideoFile(id, uploadVideoName) {
             return makeParams(details, params);
         })
         .then(function() {
-            updateState('updating db details');
-
-            return DBVideo.setVideoDetails(id, params.db);
-        })
-        .then(function() {
             updateState('capturing preview');
 
             var first = true;
@@ -54,6 +50,11 @@ function processVideoFile(id, uploadVideoName) {
             }));
         })
         .then(function() {
+            updateState('updating db details');
+
+            return DBVideo.setVideoDetails(id, params.db);
+        })
+        .then(function() {
             updateState('transcoding');
 
             return FFMpeg.runFFMpeg(details, '-i ' + fileName + ' ' + params.transcode, 'ffmpeg-transcode.log', true);
@@ -64,16 +65,50 @@ function processVideoFile(id, uploadVideoName) {
             return DBVideo.updateVideoPercent(id, 100);
         })
         .then(function() {
-            updateState('video transcoded!');
+            updateState('changing owner');
+
+            return new Promise(function(resolve, reject) {
+                childProcess.execFile('chown', ['-R', 'www-data:www-data', id], function(code, out, err) {
+                    if (!code) {
+                        resolve();
+                    } else {
+                        reject({
+                            code: code,
+                            out: out,
+                            err: err
+                        });
+                    }
+                });
+            });
+        })
+        .then(function() {
+            updateState('changing access rules');
+
+            return new Promise(function(resolve, reject) {
+                childProcess.execFile('chmod', ['-R', '777', id], function(code, out, err) {
+                    if (!code) {
+                        resolve();
+                    } else {
+                        reject({
+                            code: code,
+                            out: out,
+                            err: err
+                        });
+                    }
+                });
+            });
+        })
+        .then(function() {
+            updateState('operation completed!');
         })
         .catch(function(e) {
-            logger.error('Something go wrong', 'ID=' + id, 'STATE="' + state + '"', e);
+            logger.error(id, 'Something go wrong', 'STATE="' + state + '"', e);
         });
 
     function updateState(st) {
         state = st;
 
-        logger.v('Status updated. ID=' + id, 'State="' + state + '"');
+        logger.i(id, 'Status updated: "' + state + '"');
     }
 }
 

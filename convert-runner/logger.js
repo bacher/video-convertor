@@ -6,7 +6,7 @@ var MESSAGE_TYPES = {
     0: 'C',
     1: 'E',
     2: 'W',
-    3: 'N',
+    3: 'I',
     4: 'V'
 };
 
@@ -82,6 +82,7 @@ logger.warn     = logger.write.bind(null, 2);
 logger.log      = logger.write.bind(null, 3);
 logger.verbose  = logger.write.bind(null, 4);
 
+logger.i = logger.log;
 logger.v = logger.verbose;
 
 module.exports = logger;
