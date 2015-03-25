@@ -93,8 +93,7 @@ var FFMPEG_IMAGE_OPTIONS = [
         default: 'image2'
     },
     {
-        name: 'ss',
-        require: true
+        name: 'ss'
     },
     {
         name: 'codec:v',
@@ -132,6 +131,7 @@ Helpers.makeParams = function(options) {
         } else if (option.default) {
             paramValue = option.default;
         } else if (option.require) {
+            // WHY NOT WORK?
             throw new Error('Miss required parameter.');
         }
 

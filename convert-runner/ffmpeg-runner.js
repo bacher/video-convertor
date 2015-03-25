@@ -44,12 +44,19 @@ function processVideoFile(id, uploadVideoName) {
         .then(function() {
             updateState('capturing preview');
 
-            return FFMpeg.runFFMpeg(details, fileName, params.preview, 'ffmpeg-preview.log');
+            var first = true;
+
+            return Promise.all(params.preview.map(function(param) {
+                var logFile = first ? 'ffmpeg-preview.log' : null;
+                first = false;
+                return FFMpeg.runFFMpeg(details, '-ss '+ param.time + ' -i ' + fileName + ' ' + param.configString, logFile);
+
+            }));
         })
         .then(function() {
             updateState('transcoding');
 
-            return FFMpeg.runFFMpeg(details, fileName, params.transcode, 'ffmpeg-transcode.log', true);
+            return FFMpeg.runFFMpeg(details, '-i ' + fileName + ' ' + params.transcode, 'ffmpeg-transcode.log', true);
         })
         .then(function() {
             updateState('setting 100%');

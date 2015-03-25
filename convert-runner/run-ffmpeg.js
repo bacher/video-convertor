@@ -12,7 +12,7 @@ var logger = require('./logger');
 
 var ffmpegExec = 'ffmpeg';
 
-function runFFMpeg(details, fileName, optionsString, saveParamsFileName, analizeProcess) {
+function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
     return new Promise(function(resolve, reject) {
 
         // Example:
@@ -21,9 +21,11 @@ function runFFMpeg(details, fileName, optionsString, saveParamsFileName, analize
 
         var percent = 0;
 
-        var options = ffmpegHelper.makeHeadParams() + ' -i ' + fileName + ' ' + optionsString;
+        var options = ffmpegHelper.makeHeadParams() + ' ' + optionsString;
 
-        fs.writeFileSync(Path.join(details.id, saveParamsFileName), 'ffmpeg ' + options);
+        if (saveParamsFileName) {
+            fs.writeFileSync(Path.join(details.id, saveParamsFileName), 'ffmpeg ' + options);
+        }
 
         var ffmpeg = childProcess.spawn(ffmpegExec, options.split(' '), {
             stdio: [

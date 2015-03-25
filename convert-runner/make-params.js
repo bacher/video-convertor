@@ -1,5 +1,6 @@
 'use strict';
 
+var logger = require('./logger');
 var ffmpegHelper = require('./ffmpeg-helper');
 
 var PREVIEW_COUNT = 9;
@@ -69,18 +70,17 @@ function makePreviewParams(details, filters) {
     var delta = details.duration / (PREVIEW_COUNT + 1);
 
     for (var i = 0; i < PREVIEW_COUNT; ++i) {
-
-        var time = 5 + Math.round(delta * i);
-
-        previewParams.push(ffmpegHelper.makeParams({
-            'type': 'image',
-            'ss': time,
-            'filter:v': filters,
-            'file': details.id + '/images/preview_' + i + '.jpg'
-        }));
+        previewParams.push({
+            configString: ffmpegHelper.makeParams({
+                'type': 'image',
+                'filter:v': filters,
+                'file': details.id + '/images/preview_' + (i + 1) + '.jpg'
+            }),
+            time: 5 + Math.round(delta * i)
+        });
     }
 
-    return previewParams.join(' ');
+    return previewParams;
 }
 
 function makeDbDetails(details, dbFormats) {
