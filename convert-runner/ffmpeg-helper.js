@@ -64,11 +64,11 @@ var FFMPEG_VIDEO_OPTIONS = [
     },
     {
         name: 'filter:v',
-        default: 'yadif'
+        def: 'yadif'
     },
     {
         name: 'r',
-        default: 24
+        def: 24
     },
     {
         name: 'codec:a',
@@ -93,22 +93,22 @@ var FFMPEG_VIDEO_OPTIONS = [
 var FFMPEG_IMAGE_OPTIONS = [
     {
         name: 'f',
-        default: 'image2'
+        def: 'image2'
     },
     {
         name: 'ss'
     },
     {
         name: 'codec:v',
-        default: 'mjpeg'
+        def: 'mjpeg'
     },
     {
         name: 'vframes',
-        default: 1
+        def: 1
     },
     {
         name: 'filter:v',
-        default: 'yadif'
+        def: 'yadif'
     }
 ];
 
@@ -131,8 +131,8 @@ Helpers.makeParams = function(options) {
 
         if (option.name in options) {
             paramValue = options[option.name];
-        } else if (option.default) {
-            paramValue = option.default;
+        } else if (option.def) {
+            paramValue = option.def;
         } else if (option.require) {
             // WHY NOT WORK?
             throw new Error('Miss required parameter.');
