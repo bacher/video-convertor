@@ -65,40 +65,6 @@ function processVideoFile(id, uploadVideoName) {
             return DBVideo.updateVideoPercent(id, 100);
         })
         .then(function() {
-            updateState('changing owner');
-
-            return new Promise(function(resolve, reject) {
-                childProcess.execFile('chown', ['-R', 'www-data:www-data', id], function(code, out, err) {
-                    if (!code) {
-                        resolve();
-                    } else {
-                        reject({
-                            code: code,
-                            out: out,
-                            err: err
-                        });
-                    }
-                });
-            });
-        })
-        .then(function() {
-            updateState('changing access rules');
-
-            return new Promise(function(resolve, reject) {
-                childProcess.execFile('chmod', ['-R', '777', id], function(code, out, err) {
-                    if (!code) {
-                        resolve();
-                    } else {
-                        reject({
-                            code: code,
-                            out: out,
-                            err: err
-                        });
-                    }
-                });
-            });
-        })
-        .then(function() {
             updateState('operation completed!');
         })
         .catch(function(e) {

@@ -22,7 +22,9 @@ FolderAnalyser.prototype.stopWatch = function() {
 FolderAnalyser.prototype._checkFolder = function(folderPath, callback) {
     var that = this;
 
-    fs.readdirSync(folderPath).forEach(function(fileName) {
+    fs.readdirSync(folderPath).filter(function(fileName) {
+        return !/^\.in\./.test(fileName);
+    }).forEach(function(fileName) {
 
         var filePath = Path.join(folderPath, fileName);
 
