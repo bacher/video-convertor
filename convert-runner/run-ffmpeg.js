@@ -1,11 +1,12 @@
 'use strict';
 
+/* globals _vc */
+
 var fs = require('fs');
 var childProcess = require('child_process');
 var Path = require('path');
 var Promise = require('es6-promise').Promise; // jshint ignore:line
 
-var DBVideo = require('./db-video');
 var ffmpegHelper = require('./ffmpeg-helper');
 var parseTime = require('./parse-time').parseTime;
 var logger = require('./logger');
@@ -56,10 +57,10 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
                         logger.v(details.id, 'Percent', newPercent);
 
-                        DBVideo.updateVideoPercent(details.id, percent)
+                        _vc.db.updateVideoPercent(details.id, percent)
                             .catch(function(error) {
                                 if (error.idNotFound) {
-                                    cancel();
+                                    ffmpeg.kill();
                                 }
                             });
                     }
@@ -69,13 +70,7 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
         ffmpeg
             .on('exit', function(errorCode) {
-                if (isCanceled) {
-
-                    reject({
-                       operationCanceled: true
-                    });
-
-                } else if (errorCode === 0) {
+                if (errorCode === 0) {
                     resolve();
 
                 } else {
@@ -89,12 +84,6 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
             .on('error', function(err) {
                 logger.error('FFMPEG ERROR:', err);
             });
-
-        function cancel() {
-            isCanceled = true;
-
-            ffmpeg.kill();
-        }
 
     });
 }

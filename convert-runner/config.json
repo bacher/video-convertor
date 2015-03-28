@@ -7,7 +7,6 @@
     "user": "",
     "password": "",
     "database": "test",
-    "table": "videos"
+    "table": "video"
   }
-
 }
