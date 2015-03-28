@@ -21,7 +21,7 @@ module.exports = function() {
 
         logger.i('Starting process on file "' + fileName + '".');
 
-        childProcess.fork('worker', [fileName]);
+        childProcess.fork(Path.join(__dirname, 'worker.js'), [fileName]);
     });
 
     logger.i('Watching on directory "' + UPLOAD_PATH + '" started.');

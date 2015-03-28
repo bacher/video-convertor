@@ -59,7 +59,7 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
                         _vc.db.updateVideoPercent(details.id, percent)
                             .catch(function(error) {
-                                if (error.idNotFound) {
+                                if (_vc.operationCanceled) {
                                     ffmpeg.kill();
                                 }
                             });
@@ -70,7 +70,10 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
         ffmpeg
             .on('exit', function(errorCode) {
-                if (errorCode === 0) {
+                if (_vc.operationCanceled) {
+                    reject();
+
+                } else if (errorCode === 0) {
                     resolve();
 
                 } else {

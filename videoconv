@@ -1,8 +1,6 @@
 #!/bin/sh
 ### BEGIN INIT INFO
 # Provides:          videoconv
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Video-convertor
@@ -13,11 +11,14 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/bin
 DESC='Video-convertor'
 NAME=node
 SNAME=videoconv
-NODESCRIPT='/root/lib/video-convertor-master/convert-runner/master.js'
+NODESCRIPT='/usr/local/videoconv/convert-runner/master.js'
 DAEMON=/usr/local/bin/$NAME
-DAEMON_ARGS="$NODESCRIPT --outlog /var/log/videoconv --errlog /var/log/videoconv --config /root/videoconv.json"
+DAEMON_ARGS="$NODESCRIPT --outlog /var/log/videoconv/log --errlog /var/log/videoconv/log --config /etc/videoconv.json"
 PIDFILE=/var/run/$SNAME.pid
 SCRIPTNAME=/etc/init.d/$SNAME
+
+USER=www-data
+GROUP=www-data
 
 [ -x "$DAEMON" ] || exit 0
 [ -r "$NODESCRIPT" ] || exit 0
@@ -30,9 +31,9 @@ SCRIPTNAME=/etc/init.d/$SNAME
 . /lib/lsb/init-functions
 
 do_start() {
-	start-stop-daemon -Sbmq -p $PIDFILE -x $DAEMON --test > /dev/null || return 1
+	start-stop-daemon -Sm -c $USER:$GROUP -p $PIDFILE -x $DAEMON --test > /dev/null || return 1
 
-	start-stop-daemon -Sbmq -p $PIDFILE -x $DAEMON -- $DAEMON_ARGS || return 2
+	start-stop-daemon -Sm -c $USER:$GROUP -p $PIDFILE -x $DAEMON -- $DAEMON_ARGS || return 2
 }
 
 do_stop() {

@@ -6,6 +6,7 @@ require('./argv-parser');
 
 var fs = require('fs');
 var Path = require('path');
+var childProcess = require('child_process');
 
 var DBVideo = require('./db-video');
 var VideoUtils = require('./ffmpeg-runner');
@@ -67,7 +68,11 @@ _vc.db.connect(_vc.config['db'])
     })
     .catch(function(error) {
         if (_vc.operationCanceled) {
-            fs.rmdir(VIDEO_ROOT);
+            childProcess.exec('rm -rf ' + VIDEO_ROOT, function(error, out, err) {
+                if (error) {
+                    logger.e('Temp folder "' + VIDEO_ROOT + '" not removed.', error, err);
+                }
+            });
 
             logger.i(id, 'Operation canceled by db!');
 

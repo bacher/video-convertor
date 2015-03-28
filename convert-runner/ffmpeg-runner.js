@@ -105,7 +105,9 @@ module.exports = {
                     resolve();
                 })
                 .catch(function(e) {
-                    logger.error(id, 'Something go wrong', 'STATE="' + state + '"', e);
+                    if (!_vc.operationCanceled) {
+                        logger.error(id, 'Something go wrong', 'STATE="' + state + '"', e);
+                    }
 
                     reject(e);
                 });
