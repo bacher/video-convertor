@@ -12,8 +12,13 @@ var DBVideo = require('./db-video');
 var VideoUtils = require('./ffmpeg-runner');
 var logger = require('./logger');
 
+var id = null;
+var VIDEO_ROOT = null;
+
 process.on('uncaughtException', function(e) {
-    logger.critical(__filename, 'Global Error Caught', e);
+    logger.critical(Path.basename(__filename), id, 'Global Error Caught', e);
+
+    process.exit(100);
 });
 
 var fileName = process.argv[process.argv.length - 1];
@@ -34,9 +39,6 @@ _vc.operationCanceled = false;
 process.chdir(TEMP_PATH);
 
 _vc.db = new DBVideo();
-
-var id = null;
-var VIDEO_ROOT = null;
 
 _vc.db.connect(_vc.config['db'])
     .then(function() {

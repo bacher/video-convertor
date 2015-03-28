@@ -14,6 +14,8 @@ var UPLOAD_PATH = _vc.config['upload'];
 
 process.on('uncaughtException', function(e) {
     logger.critical(Path.basename(__filename), 'Global Error Caught', e);
+
+    process.exit(101);
 });
 
 module.exports = function() {
