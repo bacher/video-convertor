@@ -27,6 +27,8 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
             fs.writeFileSync(Path.join(details.id, saveParamsFileName), 'ffmpeg ' + options);
         }
 
+        var isCanceled = false;
+
         var ffmpeg = childProcess.spawn(ffmpegExec, options.split(' '), {
             stdio: [
                 'ignore',
@@ -54,7 +56,12 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
                         logger.v(details.id, 'Percent', newPercent);
 
-                        DBVideo.updateVideoPercent(details.id, percent);
+                        DBVideo.updateVideoPercent(details.id, percent)
+                            .catch(function(error) {
+                                if (error.idNotFound) {
+                                    cancel();
+                                }
+                            });
                     }
                 }
             }
@@ -62,16 +69,15 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
 
         ffmpeg
             .on('exit', function(errorCode) {
-                if (errorCode === 0) {
-                    // TODO: Не забыть заменить на рабочий код.
-                    //runMP4Box(details.id + '/videos', outputFileNames)
-                    //    .then(function() {
-                    //        resolve();
-                    //    })
-                    //    .catch(function(err) {
-                    //        reject(err);
-                    //    });
+                if (isCanceled) {
+
+                    reject({
+                       operationCanceled: true
+                    });
+
+                } else if (errorCode === 0) {
                     resolve();
+
                 } else {
                     reject({
                         app: 'ffmpeg',
@@ -83,6 +89,12 @@ function runFFMpeg(details, optionsString, saveParamsFileName, analizeProcess) {
             .on('error', function(err) {
                 logger.error('FFMPEG ERROR:', err);
             });
+
+        function cancel() {
+            isCanceled = true;
+
+            ffmpeg.kill();
+        }
 
     });
 }

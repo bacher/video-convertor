@@ -35,7 +35,9 @@ if (cluster.isMaster) {
         setTimeout(startFork, 1000);
     });
 } else {
-    require('./main')(config);
+    global.__vcConfig = config;
+
+    require('./main')();
 }
 
 function startFork() {

@@ -6,13 +6,16 @@ process.on('uncaughtException', function(e) {
     logger.critical('main.js Global Error Caught', e);
 });
 
-function start(config) {
+function start() {
+
+    var config = __vcConfig;
 
     var CHECK_DELAY = 2000;
     var UPLOAD_PATH = config['upload'];
     var PUBLIC_PATH = config['public'];
+    var TEMP_PATH = config['tmp'];
 
-    process.chdir(PUBLIC_PATH);
+    process.chdir(TEMP_PATH);
 
     var fs = require('fs');
     var Path = require('path');
@@ -39,7 +42,7 @@ function start(config) {
     function onVideoUploaded(fileName) {
         DBVideo.createNewVideo(fileName)
             .then(function(id) {
-                var videoRootPath = Path.join(PUBLIC_PATH, id);
+                var videoRootPath = Path.join(TEMP_PATH, id);
                 var videosPath = Path.join(videoRootPath, 'videos');
                 var imagesPath = Path.join(videoRootPath, 'images');
 

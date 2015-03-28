@@ -1,6 +1,7 @@
 {
   "upload": "/Users/Bacher/tmp/movie-upload",
   "public": "/Users/Bacher/tmp/movie-www",
+  "tmp": "/Users/Bacher/tmp/movie-tmp",
   "db": {
     "host": "localhost",
     "user": "",

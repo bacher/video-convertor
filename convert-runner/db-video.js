@@ -3,6 +3,8 @@
 var mysql = require('mysql');
 var Promise = require('es6-promise').Promise; // jshint ignore:line
 
+var logger = require('./logger');
+
 var SYMBOLS_BASE = 'abcdefghijklmnopqrstuvwxyz';
 SYMBOLS_BASE += SYMBOLS_BASE.toUpperCase();
 SYMBOLS_BASE += '0123456789';
@@ -25,12 +27,27 @@ var DBVideo = {
                 } else {
                     DBVideo._connected = true;
 
+                    DBVideo._connection.on('error', function(err) {
+
+                        logger.error('Connection error', err);
+
+                        setTimeout(function() {
+
+                            logger.i('Try reconnect', err);
+
+                            DBVideo._connection.connect();
+
+                        }, 500);
+                    });
+
                     resolve();
                 }
             });
+
         });
 
     },
+
     createNewVideo: function(title) {
         return new Promise(function(resolve, reject) {
             var hash = createHash(20);
@@ -38,8 +55,8 @@ var DBVideo = {
             var nowSeconds = Math.floor(Number(new Date()) / 1000);
 
             DBVideo._connection.query(
-                'INSERT INTO ?? (video_percent,hash,created,date,title,video_image) VALUES (0,?,?,?,?,1)',
-                [DBVideo._table, hash, nowSeconds, nowSeconds, title],
+                'INSERT INTO ?? (video_percent,hash,created,date,title,title2,video_image) VALUES (0,?,?,?,?,1)',
+                [DBVideo._table, hash, nowSeconds, nowSeconds, title, title],
                 function(err, data) {
                     if (err) {
                         reject();
@@ -69,7 +86,15 @@ var DBVideo = {
         return new Promise(function(resolve, reject) {
             DBVideo._connection.query(
                 'UPDATE ?? SET `video_percent` = ? WHERE `id` = ?', [DBVideo._table, percent, id],
-                resolveHelper(resolve, reject)
+                function(err, response) {
+                    if (err) {
+                        reject({ mysqlError: err });
+                    } else if (response.affectedRows === 0) {
+                        reject({ idNotFound: true });
+                    } else {
+                        resolve();
+                    }
+                }
             );
         });
     }
