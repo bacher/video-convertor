@@ -40,7 +40,11 @@ var logger = {
                 var message = arguments[i];
 
                 if (typeof message !== 'string') {
-                    message = JSON.stringify(message);
+                    if (message instanceof Error) {
+                        message = '[' + message.toString() + '] ' + message.stack.replace(/\n/g, '\\n');
+                    } else {
+                        message = JSON.stringify(message);
+                    }
                 }
 
                 finalMessage += ' ';

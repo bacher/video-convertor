@@ -134,7 +134,6 @@ Helpers.makeParams = function(options) {
         } else if (option.def) {
             paramValue = option.def;
         } else if (option.require) {
-            // WHY NOT WORK?
             throw new Error('Miss required parameter.');
         }
 
